@@ -13,7 +13,7 @@ def get_all_folders(path):
 
 def submit_structure(folder, ncores=32, walltime='12:00', dryrun=False):
     name = os.path.basename(folder)
-    cell_file = os.path.join(folder, "{}.cell".format(name))
+    cell_file = os.path.join(folder, "{0}.cell".format(name))
 
     # if no cell file then skip this folder
     if not os.path.isfile(cell_file):
@@ -22,7 +22,7 @@ def submit_structure(folder, ncores=32, walltime='12:00', dryrun=False):
     dry_run_flag = '-d' if dryrun else ''
     command = ['castepsub', dry_run_flag, '-n', str(ncores), '-W', str(walltime), name]
     print(' '.join(command))
-    process = subprocess.Popen(command, cwd=folder, stdout=subprocess.STDOUT)
+    process = subprocess.Popen(command, cwd=folder)
     process.wait()
 
 
