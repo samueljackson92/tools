@@ -23,7 +23,7 @@ def submit_structure(folder, ncores=32, walltime='12:00', dryrun=False):
     command = ['castepsub', dry_run_flag, '-n', str(ncores), '-W', str(walltime), name]
     command = ' '.join(command)
     print(command)
-    process = subprocess.Popen(command, cwd=folder)
+    process = subprocess.Popen(command, cwd=folder, shell=True)
     process.wait()
 
 
