@@ -20,8 +20,9 @@ def submit_structure(folder, ncores=32, walltime='12:00', dryrun=False):
         return
 
     dry_run_flag = '-d' if dryrun else ''
-    command = ['castepsub', dry_run_flag, '-n', str(ncores), '-W', str(walltime), '-c', 'castep.mpi', name]
-    print(' '.join(command))
+    command = ['castepsub', dry_run_flag, '-n', str(ncores), '-W', str(walltime), name]
+    command = ' '.join(command)
+    print(command)
     process = subprocess.Popen(command, cwd=folder)
     process.wait()
 
