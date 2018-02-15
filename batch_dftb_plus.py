@@ -4,6 +4,8 @@ import sys
 import glob
 import subprocess
 import argparse as ap
+import functools
+from multiprocessing import Pool
 
 
 def get_all_folders(path):
@@ -14,8 +16,15 @@ def get_all_folders(path):
 def run_dftb(path):
     # redirect output frm dtfb+
     FNULL = open(os.devnull, 'w')
-    process = subprocess.Popen('dftb+', cwd=path, stdout=FNULL, stderr=subprocess.STDOUT)
+    process = subprocess.Popen('dftb+', cwd=path, stdout=FNULL,
+                               stderr=subprocess.STDOUT)
     process.wait()
+
+
+def do_step(folder, resume=False):
+    if resume and os.path.isfile(os.path.join(folder, 'detailed.out')):
+        return
+    run_dftb(folder)
 
 
 def process_single_structure(path, resume=False):
@@ -26,14 +35,11 @@ def process_single_structure(path, resume=False):
     print("Processing structure {}..."
           .format(path))
 
-    for i, folder in enumerate(all_folders):
-        if resume and os.path.isfile(os.path.join(folder, 'detailed.out')):
-            continue
-        sys.stdout.write("\r running variation {} of {}"
-                         .format(i, num_variations))
+    pool = Pool()
+    func = functools.partial(do_step, **{'resume': resume})
+    for i, _ in enumerate(pool.imap_unordered(func, all_folders), 1):
+        sys.stdout.write('\rdone {0} of {1}'.format(i, num_variations))
         sys.stdout.flush()
-        run_dftb(folder)
-
 
 def process_batch(path, **kwargs):
     all_folders = get_all_folders(path)
