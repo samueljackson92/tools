@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 import os
 import sys
-import glob
 import subprocess
 import argparse as ap
 import functools
 from multiprocessing import Pool
 
-
-def get_all_folders(path):
-    all_files = glob.glob(os.path.join(path, "*"))
-    return filter(lambda p: os.path.isdir(p), all_files)
+from utils import get_all_folders
 
 
 def run_dftb(path):

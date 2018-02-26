@@ -1,14 +1,9 @@
 #!/usr/bin/env python
 import os
-import sys
-import glob
 import subprocess
 import argparse as ap
 
-
-def get_all_folders(path):
-    all_files = glob.glob(os.path.join(path, "*"))
-    return filter(lambda p: os.path.isdir(p), all_files)
+from utils import get_all_folders
 
 
 def submit_structure(folder, ncores=32, walltime='12:00', dryrun=False):
