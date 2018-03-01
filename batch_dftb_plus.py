@@ -9,20 +9,6 @@ from multiprocessing import Pool
 from tool_utils import get_all_folders
 
 
-def run_dftb(path):
-    # redirect output frm dtfb+
-    FNULL = open(os.devnull, 'w')
-    process = subprocess.Popen('dftb+', cwd=path, stdout=FNULL,
-                               stderr=subprocess.STDOUT)
-    process.wait()
-
-
-def do_step(folder, resume=False):
-    if resume and os.path.isfile(os.path.join(folder, 'geo_end.xyz')):
-        return
-    run_dftb(folder)
-
-
 class JobBatch:
     """A class to create and manage a job pool
 
@@ -55,6 +41,20 @@ class JobBatch:
 
     def __exit__(self, type, value, traceback):
         self._pool.close()
+
+
+def run_dftb(path):
+    # redirect output frm dtfb+
+    FNULL = open(os.devnull, 'w')
+    process = subprocess.Popen('dftb+', cwd=path, stdout=FNULL,
+                               stderr=subprocess.STDOUT)
+    process.wait()
+
+
+def do_step(folder, resume=False):
+    if resume and os.path.isfile(os.path.join(folder, 'geo_end.xyz')):
+        return
+    run_dftb(folder)
 
 
 def process_single_structure(path, resume=False):

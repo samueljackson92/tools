@@ -11,6 +11,50 @@ from ase.calculators.dftb import Dftb
 from ase.calculators.singlepoint import SinglePointCalculator
 
 
+class NameGenerator:
+    """Generator to create names matching a pattern with
+    zero padded numbers appended.
+    """
+
+    def __init__(self, pattern, size):
+        self._pattern = pattern
+        self._num_format = self._get_padded_number_format(size)
+        self._count = 0
+
+    def _get_padded_number_format(size):
+        return '{{0:0{0}n}}'.format(int(np.floor(np.log10(size))+1))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self._count += 1
+        ext = self._num_format.format(self._count)
+        return self._pattern.format(ext)
+
+    def next(self):
+        return self.__next__()
+
+
+class BackupFile():
+    """Backup a file before performing an operation
+
+    A class to make a copy of a file before performing some
+    potentially unsafe operation on it. In either succes or failure
+    the copy of the original file it restored.
+    """
+    def __init__(self, file_name, backup_file):
+        self._file_name = file_name
+        self._backup_file = backup_file
+
+    def __enter__(self):
+        shutil.copyfile(self._file_name, self._backup_file)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        shutil.move(self._backup_file, self._file_name)
+
+
 def get_all_folders(path):
     all_files = glob.glob(os.path.join(path, "*"))
     return filter(lambda p: os.path.isdir(p), all_files)
@@ -33,25 +77,6 @@ def tag_muon(atoms):
     tags = atoms.get_tags()
     tags[-1] = 1
     return tags
-
-
-class BackupFile():
-    """Backup a file before performing an operation
-
-    A class to make a copy of a file before performing some
-    potentially unsafe operation on it. In either succes or failure
-    the copy of the original file it restored.
-    """
-    def __init__(self, file_name, backup_file):
-        self._file_name = file_name
-        self._backup_file = backup_file
-
-    def __enter__(self):
-        shutil.copyfile(self._file_name, self._backup_file)
-        return self
-
-    def __exit__(self, type, value, traceback):
-        shutil.move(self._backup_file, self._file_name)
 
 
 def load_cell(file_name):
@@ -117,16 +142,12 @@ def pickle_structures(atoms, out_folder):
 
     os.mkdir(out_folder)
 
-    num_format = get_padded_number_format(len(atoms))
-    for i, atoms in enumerate(atoms):
-        ext = num_format.format(i+1)
-        out_file = os.path.join(out_folder, "structure_{}.pkl".format(ext))
+    file_names = NameGenerator("structure_{}.pkl", len(atoms))
+
+    for file_name, atoms in zip(file_names, atoms):
+        out_file = os.path.join(out_folder, file_name)
         with open(out_file, 'wb') as handle:
             pickle.dump(atoms, handle)
-
-
-def get_padded_number_format(size):
-    return '{{0:0{0}n}}'.format(int(np.floor(np.log10(size))+1))
 
 
 def main():
