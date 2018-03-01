@@ -14,7 +14,7 @@ from _muairss.input import load_input_file
 
 import matplotlib.pyplot as plt
 
-from utils import load_dtfb
+from tool_utils import load_dtfb
 
 # Parameter file schema and defaults
 conv_schema = Schema({

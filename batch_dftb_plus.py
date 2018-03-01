@@ -6,7 +6,7 @@ import argparse as ap
 import functools
 from multiprocessing import Pool
 
-from utils import get_all_folders
+from tool_utils import get_all_folders
 
 
 def run_dftb(path):
