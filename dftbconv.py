@@ -50,7 +50,8 @@ def write_mutiple_parameter(args, conv_params):
         raise RuntimeError("Input seed must be a folder")
 
     params = load_input_file(args.parameter_file)
-    kpt_range = range(conv_params['kpoint_n_min'], conv_params['kpoint_n_max']+1)
+    kpt_range = range(conv_params['kpoint_n_min'],
+                      conv_params['kpoint_n_max']+1)
 
     folder_names = []
     for num_kpts in kpt_range:
@@ -79,6 +80,10 @@ def generate_results(folder_names):
     file_names = map(lambda x: os.path.join(x, "geo_end.xyz"), folder_names)
     cout_atoms = map(load_dtfb, file_names)
     cout_atoms = filter(lambda x: x.calc is not None, cout_atoms)
+
+    if len(cout_atoms) == 0:
+        print("No results to process!")
+        return
 
     energies = map(lambda s: s.get_potential_energy(), cout_atoms)
     forces = map(lambda s: s.get_forces(), cout_atoms)
@@ -122,7 +127,7 @@ if __name__ == "__main__":
     conv_params = load_conv_file(args.conv_file)
     if args.mode == "input" or args.mode == "all":
         folder_names = write_mutiple_parameter(args, conv_params)
- 
+
     if args.mode == "all":
         map(run_dftb, folder_names)
 
