@@ -18,9 +18,43 @@ def run_dftb(path):
 
 
 def do_step(folder, resume=False):
-    if resume and os.path.isfile(os.path.join(folder, 'detailed.out')):
+    if resume and os.path.isfile(os.path.join(folder, 'geo_end.xyz')):
         return
     run_dftb(folder)
+
+
+class JobBatch:
+    """A class to create and manage a job pool
+
+    Accepts a function, a collection of items to
+    map over and any additional parameters to pass
+    to the function.
+    """
+
+    def __init__(self, func, items, **params):
+        self._func = functools.partial(func, **params)
+        self._items = items
+
+    def __enter__(self):
+        self._pool = Pool()
+        self._jobs = self._pool.imap_unordered(self._func, self._items)
+        return self
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # Setting a timeout here works around this bug:
+        # https://bugs.python.org/issue8296
+        # which prevents the user from killing all processes with Ctrl+C
+        result = self._jobs.next(timeout=sys.maxint)
+        return result
+
+    def next(self):
+        return self.__next__()
+
+    def __exit__(self, type, value, traceback):
+        self._pool.close()
 
 
 def process_single_structure(path, resume=False):
@@ -31,11 +65,11 @@ def process_single_structure(path, resume=False):
     print("Processing structure {}..."
           .format(path))
 
-    pool = Pool()
-    func = functools.partial(do_step, **{'resume': resume})
-    for i, _ in enumerate(pool.imap_unordered(func, all_folders), 1):
-        sys.stdout.write('\rdone {0} of {1}'.format(i, num_variations))
-        sys.stdout.flush()
+    with JobBatch(do_step, all_folders, resume=resume) as batch:
+        for i, result in enumerate(batch):
+            sys.stdout.write('\rdone {0} of {1}'.format(i, num_variations))
+            sys.stdout.flush()
+
 
 def process_batch(path, **kwargs):
     all_folders = get_all_folders(path)
@@ -54,7 +88,7 @@ def main():
 
     if args.resume:
         print ("Resuming!")
- 
+
     if os.path.isdir(os.path.join(args.structures, "dftb+")):
         # Looks like we're trying to run dftb+ on a single structure
         process_single_structure(args.structures, resume=args.resume)
