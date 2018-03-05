@@ -21,7 +21,7 @@ class NameGenerator:
         self._num_format = self._get_padded_number_format(size)
         self._count = 0
 
-    def _get_padded_number_format(size):
+    def _get_padded_number_format(self, size):
         return '{{0:0{0}n}}'.format(int(np.floor(np.log10(size))+1))
 
     def __iter__(self):

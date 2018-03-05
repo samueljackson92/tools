@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import glob
+import sys
+import socket
 import os
 import argparse as ap
 from scp import SCPClient
@@ -13,7 +14,7 @@ logger = logging.getLogger("castep_submitter")
 
 def check_overwrite():
     text = ''
-    while text not in ['y', 'n']: 
+    while text not in ['y', 'n']:
         print("Directory already exists. Do you wish to overwrite? (y/n)")
         text = raw_input()
 
@@ -27,13 +28,18 @@ def connect_to_host(host):
 
 
 def check_directory_exists(remote, directory):
-    stdout, stderr = run_command(remote, 'if test -d "{}"; then echo True; else echo False; fi'.format(directory))
+    command = 'if test -d "{}"; then echo True; else echo False; fi'.format(directory)
+    stdout, stderr = run_command(remote, command)
     return "True" in stdout
+
+
+def progress(filename, size, sent):
+    sys.stdout.write("Uploading {}\r".format(filename))
 
 
 def upload(host, directory):
     queue = connect_to_host(host)
-    
+
     with queue._rTarg.context as remote:
         dir_exists = check_directory_exists(remote, directory)
 
@@ -42,7 +48,7 @@ def upload(host, directory):
                 remote.run_cmd('rm -R {}'.format(directory))
 
             print("Uploading {}".format(directory))
-            scp = SCPClient(remote._client.get_transport())
+            scp = SCPClient(remote._client.get_transport(), progress=progress)
             scp.put(directory, recursive=True,
                     remote_path='~/{}'.format(directory))
             scp.close()
@@ -51,6 +57,7 @@ def upload(host, directory):
 
 
 def submit(*args, **kwargs):
+    SECS_IN_MIN = 60.0
     wait_time = kwargs.pop("wait_time")
 
     hdlr = logging.FileHandler(kwargs.pop('log_file'))
@@ -60,9 +67,14 @@ def submit(*args, **kwargs):
 
     finished = False
     while not finished:
-        finished = submit_job(*args, **kwargs)
+        try:
+            finished = submit_job(*args, **kwargs)
+        except socket.timeout:
+            logger.error("Connection timeout, retrying...")
+            time.sleep(5)
+
         if not finished:
-            logger.info("Waiting for {} mins".format(wait_time/60.0))
+            logger.info("Waiting for {} mins".format(wait_time/SECS_IN_MIN))
             time.sleep(wait_time)
 
 
@@ -76,7 +88,6 @@ def run_command(remote, command, **kwargs):
         except:
             logger.error("Failed to connect, retrying...")
             time.sleep(5)
-            pass
 
     return stdout, stderr
 
@@ -85,7 +96,7 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
 
     logger.info("Running castep_submitter")
     queue = connect_to_host(host)
-    
+
     with queue._rTarg.context as remote:
         dir_exists = check_directory_exists(remote, directory)
         if not dir_exists:
@@ -97,7 +108,7 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
         dir_names = stdout.split()[1:]
 
         stdout, _ = run_command(remote, 'find {} -name "*-out.cell"'.format(directory))
-        cell_files = stdout.split() 
+        cell_files = stdout.split()
         cell_dirs = map(lambda name: os.path.dirname(name), cell_files)
         unprocessed = filter(lambda name: not name in cell_dirs, dir_names)
 
@@ -115,21 +126,26 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
 
         logger.info("Removing any .check and .castep_bin files")
         run_command(remote, 'find {} -name "*.castep_bin" | xargs -L1 rm'.format(directory))
+        run_command(remote, 'find {} -name "*.check_bak" | xargs -L1 rm'.format(directory))
         run_command(remote, 'find {} -name "*.check" | xargs -L1 rm'.format(directory))
 
-    jobs = queue.list().values()
-    pending_jobs = filter(lambda job: job['job_status'] == 'PEND', jobs)
-    num_pending_jobs = len(pending_jobs)
+        logger.info("Finding current job names")
+        stdout, stderr = run_command(remote, "bjobs -o 'job_name' | awk 'NR > 1 {print $1}'")
+        stack_names = stdout.split("\n")
 
-    logger.info("Number of pending jobs: {}".format(num_pending_jobs))
+    num_unprocessed = len(unprocessed)
+    unprocessed = filter(lambda name: os.path.basename(name) not in stack_names, unprocessed)
+    num_queued_jobs = num_unprocessed - len(unprocessed)
+
+    logger.info("Number of pending or running jobs: {}".format(num_queued_jobs))
 
     batch_dirs = unprocessed[:batch_size]
     dry_run = '-d' if dry_run else ''
 
-    if num_pending_jobs > 0:
-        logger.info("There are already pending jobs. Quiting")
+    if num_queued_jobs > 0:
+        logger.info("There are already running/pending jobs. Quiting")
         return False
-    
+
     logger.info("Submitting {} jobs".format(batch_size))
 
     with queue._rTarg.context as remote:
