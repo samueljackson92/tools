@@ -18,6 +18,8 @@ from tool_utils import load_dtfb
 
 # Parameter file schema and defaults
 conv_schema = Schema({
+    Optional('running_mode', default='parallel'): str,
+    Optional('convergence_task', default='input'): str,
     Optional('kpoint_n_min', default=1): int,
     Optional('kpoint_n_max', default=4): int,
 })
@@ -99,7 +101,7 @@ def generate_results(folder_names):
     plt.savefig('energy.png', bbox_inches='tight')
 
     fig, ax = makefig()
-    ax.plot(k_range, -np.array(norms))
+    ax.plot(k_range, np.array(norms))
     ax.set_xlabel("Num K Points")
     ax.set_ylabel("Force")
     plt.savefig('forces.png', bbox_inches='tight')

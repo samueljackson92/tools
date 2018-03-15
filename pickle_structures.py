@@ -122,11 +122,14 @@ def load_dtfb(file_name):
 def load_castep(fname):
     atoms = io.read(fname)
     # Create a calculator to store the energy
-    atoms_cast = io.read(fname.replace('-out.cell', '.castep'))
-    spcalc = SinglePointCalculator(atoms,
-                                   energy=atoms_cast.get_potential_energy(),
-                                   forces=atoms_cast.get_forces())
-    atoms.set_calculator(spcalc)
+    try:
+        atoms_cast = io.read(fname.replace('-out.cell', '.castep'))
+        spcalc = SinglePointCalculator(atoms,
+                                       energy=atoms_cast.get_potential_energy(),
+                                       forces=atoms_cast.get_forces())
+        atoms.set_calculator(spcalc)
+    except:
+        print("Failed to load -out.cell file")
     atoms.set_tags(tag_muon(atoms))
     return atoms
 
