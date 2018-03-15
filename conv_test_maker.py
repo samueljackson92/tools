@@ -57,6 +57,7 @@ def run_dftbconv(path, name, parameter_file, conv_file, mode):
 def run_castepconv(path, name):
     print ("Running castepconv.py in {}".format(path))
     command = "castepconv.py {}".format(name)
+    print command
     process = subprocess.Popen(command, cwd=path, shell=True)
     process.wait()
 
@@ -111,6 +112,9 @@ def create_castep_test(params, conv_params, parameter_file, conv_file):
             for line in lines:
                 f_handle.write(re.sub(r'H mu', 'H:mu', line))
 
+    cell_file = os.path.join(path, name+".cell")
+    shutil.move(cell_file, cell_file + ".orig")
+
 
 def create_convergence_test(struct, params, conv_params, parameter_file, conv_file):
     generate_single_structure(struct, params)
@@ -152,10 +156,11 @@ def main():
                         formatted file with convergence parameters.""")
     args = parser.parse_args()
 
+    name = os.path.splitext(os.path.basename(args.structure))[0]
     if args.parameter_file is None:
-        args.parameter_file = os.path.basename(args.structure) + ".yaml"
+        args.parameter_file = os.path.basename(name) + ".yaml"
     if args.conv_file is None:
-        args.conv_file = os.path.basename(args.structure) + ".conv"
+        args.conv_file = os.path.basename(name) + ".conv"
 
     args.parameter_file = os.path.abspath(args.parameter_file)
     args.conv_file = os.path.abspath(args.conv_file)

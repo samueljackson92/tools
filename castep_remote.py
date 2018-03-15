@@ -103,27 +103,27 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
             logger.info("Directory does not exist! Cannot submit jobs")
             return True
 
-        directory = os.path.join(directory, "castep")
-        stdout, _ = run_command(remote, 'find {} -type d'.format(directory))
-        dir_names = stdout.split()[1:]
+        stdout, _ = run_command(remote, 'find {} -name "*.cell"'.format(directory))
+        cell_files = stdout.split()
 
         stdout, _ = run_command(remote, 'find {} -name "*-out.cell"'.format(directory))
-        cell_files = stdout.split()
+        out_cell_files = stdout.split()
+
         cell_dirs = map(lambda name: os.path.dirname(name), cell_files)
-        unprocessed = filter(lambda name: not name in cell_dirs, dir_names)
+        out_cell_dirs = map(lambda name: os.path.dirname(name), out_cell_files)
+        unprocessed = filter(lambda name: not name in out_cell_dirs, cell_dirs)
 
-        total_num_structures = len(dir_names)
-        total_unprocessed = len(unprocessed)
+        total_num_structures = len(cell_files)
+        total_unprocessed = total_num_structures - len(out_cell_files)
         total_processed = total_num_structures - total_unprocessed
-
-        if total_unprocessed == 0:
-            logger.info ("No structures are currently unprocessed for this structure!")
-            return True
-
 
         logger.info("Number of structures: {}".format(total_num_structures))
         logger.info("Number of processed structures: {}".format(total_processed))
         logger.info("Number of unprocessed structures: {}".format(total_unprocessed))
+
+        if total_unprocessed == 0:
+            logger.info ("No structures are currently unprocessed for this structure!")
+            return True
 
         logger.info("Finding current job names")
         stdout, stderr = run_command(remote, "bjobs -o 'job_name' | awk 'NR > 1 {print $1}'")

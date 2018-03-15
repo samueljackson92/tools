@@ -67,7 +67,7 @@ def process_single_structure(path, resume=False):
 
     with JobBatch(do_step, all_folders, resume=resume) as batch:
         for i, result in enumerate(batch):
-            sys.stdout.write('\rdone {0} of {1}'.format(i, num_variations))
+            sys.stdout.write('\rdone {0} of {1}\n'.format(i+1, num_variations))
             sys.stdout.flush()
 
 
