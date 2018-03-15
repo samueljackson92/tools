@@ -55,7 +55,6 @@ def run_dftbconv(path, name, parameter_file, conv_file, mode):
 
 
 def run_castepconv(path, name):
-    print path
     print ("Running castepconv.py in {}".format(path))
     command = "castepconv.py {}".format(name)
     process = subprocess.Popen(command, cwd=path, shell=True)
