@@ -62,12 +62,12 @@ def process_single_structure(path, resume=False):
     all_folders = get_all_folders(dftb_files_path)
     num_variations = len(all_folders)
 
-    print("Processing structure {}..."
+    print("\nProcessing structure {}..."
           .format(path))
 
     with JobBatch(do_step, all_folders, resume=resume) as batch:
         for i, result in enumerate(batch):
-            sys.stdout.write('\rdone {0} of {1}\n'.format(i+1, num_variations))
+            sys.stdout.write('\rdone {0} of {1}'.format(i+1, num_variations))
             sys.stdout.flush()
 
 
