@@ -109,9 +109,14 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
         stdout, _ = run_command(remote, 'find {} -name "*-out.cell"'.format(directory))
         out_cell_files = stdout.split()
 
+        stdout, _ = run_command(remote, 'find {} -name "*.err"'.format(directory))
+        error_files = stdout.split()
+
         cell_dirs = map(lambda name: os.path.dirname(name), cell_files)
         out_cell_dirs = map(lambda name: os.path.dirname(name), out_cell_files)
-        unprocessed = filter(lambda name: not name in out_cell_dirs, cell_dirs)
+        error_dirs = map(lambda name: os.path.dirname(name), error_files)
+        unprocessed = filter(lambda name: name not in out_cell_dirs, cell_dirs)
+        unprocessed = filter(lambda name: name not in error_dirs, unprocessed)
 
         total_num_structures = len(cell_files)
         total_unprocessed = total_num_structures - len(out_cell_files)
