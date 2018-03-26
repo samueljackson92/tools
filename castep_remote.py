@@ -3,6 +3,7 @@ import sys
 import socket
 import os
 import argparse as ap
+from paramiko.ssh_exception import SSHException
 from scp import SCPClient
 from soprano.hpc.submitter.queues import QueueInterface
 import logging
@@ -70,6 +71,12 @@ def submit(*args, **kwargs):
         try:
             finished = submit_job(*args, **kwargs)
         except socket.timeout:
+            logger.error("Connection timeout, retrying...")
+            time.sleep(5)
+        except SSHException:
+            logger.error("Connection timeout, retrying...")
+            time.sleep(5)
+        except:
             logger.error("Connection timeout, retrying...")
             time.sleep(5)
 
