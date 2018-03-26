@@ -2,7 +2,7 @@
 import os
 import sys
 import argparse as ap
-from common import JobBatch, run_dftb, get_all_folders
+from common import JobBatch, run_dftb, get_all_folders, get_all_folders_containing_pattern
 
 
 def do_step(folder, resume=False):
@@ -18,7 +18,7 @@ def do_step(folder, resume=False):
     run_dftb(folder)
 
 
-def process_single_structure(path, resume=False):
+def process_structures(all_folders, resume=False):
     """Process a collection of configurations for a single structure
 
     DFTB+ is run asynchronosly on each candidate structure in the folder.
@@ -28,29 +28,13 @@ def process_single_structure(path, resume=False):
         resume (bool): whether to start processing from the beginning or skip
             already processed files.
     """
-    dftb_files_path = os.path.join(path, "dftb+")
-    all_folders = get_all_folders(dftb_files_path)
     num_variations = len(all_folders)
 
-    print("\nProcessing structure {}..."
-          .format(path))
-
+    print("Processing {} structures".format(num_variations))
     with JobBatch(do_step, all_folders, resume=resume) as batch:
         for i, result in enumerate(batch):
             sys.stdout.write('\rdone {0} of {1}'.format(i+1, num_variations))
             sys.stdout.flush()
-
-
-def process_batch(path, **kwargs):
-    """Process a folder containing a number of different structures
-
-    Args:
-        path (str): parent folder containg all the structures DFTB+ needs to be run on.
-        kwargs (dict): other keywords to generate a single structure.
-    """
-    all_folders = get_all_folders(path)
-    for folder in all_folders:
-        process_single_structure(folder, **kwargs)
 
 
 def main():
@@ -62,7 +46,7 @@ def main():
     parser = ap.ArgumentParser(description=description,
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
     parser.add_argument('structures', type=str,
-                        help='File or folder of structures to run dtfb+ on')
+                        help='Folder of structures to run dtfb+ on')
     parser.add_argument('--resume', required=False, action='store_true',
                         help="Whether to start from where we left off")
     args = parser.parse_args()
@@ -70,15 +54,11 @@ def main():
     if args.resume:
         print ("Resuming!")
 
-    if os.path.isdir(os.path.join(args.structures, "dftb+")):
-        # Looks like we're trying to run dftb+ on a single structure
-        process_single_structure(args.structures, resume=args.resume)
-    elif os.path.isdir(args.structures):
-        # Looks like we're trying to run dftb+ on a batch of structures
-        process_batch(args.structures, resume=args.resume)
-    else:
+    if not os.path.isdir(os.path.join(args.structures)):
         raise RuntimeError("First argument must be a file or a folder")
 
+    all_folders = get_all_folders_containing_pattern("dftb_in.hsd", args.structures)
+    process_structures(all_folders, resume=args.resume)
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,4 @@
+import fnmatch
 import os
 import sys
 import glob
@@ -135,6 +136,23 @@ def get_all_folders(path):
     """
     all_files = glob.glob(os.path.join(path, "*"))
     return filter(lambda p: os.path.isdir(p), all_files)
+
+
+def get_all_folders_containing_pattern(pattern, directory):
+    """Get all directories containing a file matching pattern
+
+    Args:
+      pattern (str): pattern to match file names against
+      directory (str): path to search for directories in.
+
+    Return:
+        matches (list) list of matches folder paths
+    """
+    matches = []
+    for root, dirnames, filenames in os.walk(directory):
+        for filename in fnmatch.filter(filenames, '*dftb_in.hsd'):
+            matches.append(root)
+    return matches
 
 
 def tag_muon(atoms):
