@@ -70,19 +70,18 @@ def submit(*args, **kwargs):
     while not finished:
         try:
             finished = submit_job(*args, **kwargs)
+
+            if not finished:
+                logger.info("Waiting for {} mins".format(wait_time/SECS_IN_MIN))
+                time.sleep(wait_time)
         except socket.timeout:
             logger.error("Connection timeout, retrying...")
             time.sleep(5)
-        except SSHException:
-            logger.error("Connection timeout, retrying...")
+        except SSHException, e:
+            logger.error("SSH exception, retrying...")
+            logger.error(e)
+            logger.error("retrying...")
             time.sleep(5)
-        except:
-            logger.error("Connection timeout, retrying...")
-            time.sleep(5)
-
-        if not finished:
-            logger.info("Waiting for {} mins".format(wait_time/SECS_IN_MIN))
-            time.sleep(wait_time)
 
 
 def run_command(remote, command, **kwargs):
@@ -112,6 +111,7 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
 
         stdout, _ = run_command(remote, 'find {} -name "*.cell"'.format(directory))
         cell_files = stdout.split()
+        cell_files = filter(lambda c: not c.endswith('-out.cell'), cell_files)
 
         stdout, _ = run_command(remote, 'find {} -name "*-out.cell"'.format(directory))
         out_cell_files = stdout.split()
@@ -122,11 +122,15 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
         cell_dirs = map(lambda name: os.path.dirname(name), cell_files)
         out_cell_dirs = map(lambda name: os.path.dirname(name), out_cell_files)
         error_dirs = map(lambda name: os.path.dirname(name), error_files)
+
         unprocessed = filter(lambda name: name not in out_cell_dirs, cell_dirs)
         unprocessed = filter(lambda name: name not in error_dirs, unprocessed)
 
+        unprocessed_cell_files = filter(lambda name: name not in out_cell_dirs, cell_files)
+        unprocessed_cell_files = filter(lambda name: name not in error_dirs, unprocessed_cell_files)
+
         total_num_structures = len(cell_files)
-        total_unprocessed = total_num_structures - len(out_cell_files)
+        total_unprocessed = total_num_structures - len(unprocessed_cell_files)
         total_processed = total_num_structures - total_unprocessed
 
         logger.info("Number of structures: {}".format(total_num_structures))
@@ -142,12 +146,17 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
         stack_names = stdout.split("\n")
 
         num_unprocessed = len(unprocessed)
+
         unprocessed = filter(lambda name: os.path.basename(name) not in stack_names, unprocessed)
+        unprocessed_cell_files = filter(lambda name: os.path.dirname(name) not in stack_names, unprocessed_cell_files)
+
         num_queued_jobs = num_unprocessed - len(unprocessed)
 
         logger.info("Number of pending or running jobs: {}".format(num_queued_jobs))
 
         batch_dirs = unprocessed[:batch_size]
+        batch_cell_files = unprocessed_cell_files[:batch_size]
+
         dry_run = '-d' if dry_run else ''
 
         if num_queued_jobs > 0:
@@ -162,9 +171,10 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
 
         logger.info("Submitting {} jobs".format(batch_size))
 
-        for path in batch_dirs:
+        for cell_file, path in zip(batch_cell_files, batch_dirs):
+            logger.info(cell_file)
             stdout, _ = run_command(remote, "castepsub {} -n {} -W {} {}".format(
-                dry_run, ncores, walltime, os.path.basename(path)), cwd=path)
+                dry_run, ncores, walltime, os.path.basename(os.path.splitext(cell_file)[0])), cwd=path)
             logger.info(stdout)
 
     return False

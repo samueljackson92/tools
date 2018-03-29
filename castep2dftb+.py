@@ -67,16 +67,16 @@ def main():
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
     parser.add_argument('input', type=str,
                         help='CASTEP .cell file to convert to DFTB+ .gen file')
-    parser.add_argument('output', type=str,
-                        help='CASTEP .cell file to convert to DFTB+ .gen file')
     parser.add_argument('param_file', type=str,
                         help='CASTEP .param file to convert to DFTB+ .in file')
+    parser.add_argument('--output', type=str, default=".",
+                        help='Output folder to save to')
     args = parser.parse_args()
     param_file = args.param_file
 
     if os.path.isfile(args.input):
-        cell_file = args.cell_file
-        convert_single_structure(cell_file, param_file)
+        cell_file = args.input
+        convert_single_structure(cell_file, param_file, directory=args.output)
     elif os.path.isdir(args.input):
         directory = args.input
         cell_files = glob.glob(os.path.join(directory, "*.cell"))

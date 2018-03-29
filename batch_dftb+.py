@@ -2,7 +2,7 @@
 import os
 import sys
 import argparse as ap
-from common import JobBatch, run_dftb, get_all_folders, get_all_folders_containing_pattern
+from common import JobBatch, run_dftb, get_all_folders_containing_pattern
 
 
 def do_step(folder, resume=False):

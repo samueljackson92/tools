@@ -34,7 +34,7 @@ class JobBatch:
 
     def __enter__(self):
         """Create the job pool and jobs to run"""
-        self._pool = Pool()
+        self._pool = Pool(processes=4)
         self._jobs = self._pool.imap_unordered(self._func, self._items)
         return self
 
@@ -150,7 +150,7 @@ def get_all_folders_containing_pattern(pattern, directory):
     """
     matches = []
     for root, dirnames, filenames in os.walk(directory):
-        for filename in fnmatch.filter(filenames, '*dftb_in.hsd'):
+        for filename in fnmatch.filter(filenames, pattern):
             matches.append(root)
     return matches
 
