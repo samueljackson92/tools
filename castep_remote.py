@@ -130,7 +130,7 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
         unprocessed_cell_files = filter(lambda name: name not in error_dirs, unprocessed_cell_files)
 
         total_num_structures = len(cell_files)
-        total_unprocessed = total_num_structures - len(unprocessed_cell_files)
+        total_unprocessed = len(unprocessed_cell_files)
         total_processed = total_num_structures - total_unprocessed
 
         logger.info("Number of structures: {}".format(total_num_structures))
