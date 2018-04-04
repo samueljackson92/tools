@@ -13,7 +13,7 @@ def do_step(folder, resume=False):
         resume (bool): whether to skip processing this folder if it has already
             been processed once before.
     """
-    if resume and os.path.isfile(os.path.join(folder, 'geo_end.xyz')):
+    if resume and os.path.isfile(os.path.join(folder, 'results.out')):
         return
     run_dftb(folder)
 
