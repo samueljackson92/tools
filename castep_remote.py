@@ -126,8 +126,8 @@ def submit_job(host, directory, batch_size, walltime, ncores, dry_run):
         unprocessed = filter(lambda name: name not in out_cell_dirs, cell_dirs)
         unprocessed = filter(lambda name: name not in error_dirs, unprocessed)
 
-        unprocessed_cell_files = filter(lambda name: name not in out_cell_dirs, cell_files)
-        unprocessed_cell_files = filter(lambda name: name not in error_dirs, unprocessed_cell_files)
+        unprocessed_cell_files = filter(lambda name: os.path.dirname(name) not in out_cell_dirs, cell_files)
+        unprocessed_cell_files = filter(lambda name: os.path.dirname(name) not in error_dirs, unprocessed_cell_files)
 
         total_num_structures = len(cell_files)
         total_unprocessed = len(unprocessed_cell_files)
