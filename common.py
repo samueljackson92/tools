@@ -122,8 +122,8 @@ def run_dftb(path):
         path (str): directory to run DFTB+ in.
     """
     # redirect output from dtfb+
-    FNULL = open(os.devnull, 'w')
-    process = subprocess.Popen('dftb+', cwd=path, stdout=FNULL,
+    log_file = open(os.path.join(path, "dftb+.log"), 'w')
+    process = subprocess.Popen('dftb+', cwd=path, stdout=log_file,
                                stderr=subprocess.STDOUT)
     process.wait()
 

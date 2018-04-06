@@ -47,7 +47,7 @@ def main():
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
     parser.add_argument('structures', type=str,
                         help='Folder of structures to run dtfb+ on')
-    parser.add_argument('--resume', required=False, action='store_true',
+    parser.add_argument('--resume', required=False, default=False, action='store_true',
                         help="Whether to start from where we left off")
     args = parser.parse_args()
 
