@@ -147,13 +147,27 @@ def create_batch_tests(args):
 
 
 def main():
-    parser = ap.ArgumentParser()
+    description ="""Make a convergence test case for a particular structure
+
+    This tool takes an input structure file (e.g. a CIF) and a YAML parameter
+    file. It also takes a convegence file which should be in the same format as
+    expected by the castepconv.py tool supplied with CASTEP. The tool generates
+    a series of convergence tests for the criteria in the .conv file. Note: for
+    DFTB+ only testing convergence over the number of k-points is currently
+    supported by the dftbconv tool.
+    """
+    parser = ap.ArgumentParser(description=description)
     parser.add_argument('structure', type=str,
-                        help="A structure file an ASE readable format")
-    parser.add_argument('-p', '--parameter-file', type=str, default=None, help="""YAML
-                        formatted file with generation parameters. """)
-    parser.add_argument('-c', '--conv-file', type=str, default=None, help="""YAML
-                        formatted file with convergence parameters.""")
+                        help="""A structure file an ASE readable format. e.g. a
+                        CIF""")
+    parser.add_argument('-p', '--parameter-file', type=str, default=None,
+                        help="""YAML formatted file parameter file. This is
+                        used to generate a candidate structure for the
+                        convergence test.  """)
+    parser.add_argument('-c', '--conv-file', type=str, default=None,
+                        help="""YAML formatted file with convergence
+                        parameters. This should be the same format as expected
+                        by the castepconv.py tool.""")
     args = parser.parse_args()
 
     name = os.path.splitext(os.path.basename(args.structure))[0]

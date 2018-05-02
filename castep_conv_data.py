@@ -25,7 +25,8 @@ def read_geom_steps(paths):
 
 
 def read_energy_conv(path):
-    pattern = re.compile(r'Final energy, E\s+=\s+([+-]?\d*\.?\d*([Ee][+-]?\d+)?)\s+eV')
+    pattern = r'Final energy, E\s+=\s+([+-]?\d*\.?\d*([Ee][+-]?\d+)?)\s+eV'
+    pattern = re.compile(pattern)
     energy = []
 
     files = glob.glob(os.path.join(path, "*.castep"))
@@ -68,7 +69,8 @@ def histogram_plot(series, file_name):
 
 def safe_remove_folder(path):
     if os.path.isdir(path):
-        answer = raw_input("Are you sure you want to overwrite {}? [y/n]".format(path))
+        message = "Are you sure you want to overwrite {}? [y/n]".format(path)
+        answer = raw_input(message)
         if answer != "y":
             sys.exit()
         else:
@@ -76,12 +78,27 @@ def safe_remove_folder(path):
 
     return
 
+
 def main():
-    parser = ap.ArgumentParser(description="""Plot the convergence of a set of
-                               structures""",
-                               formatter_class=ap.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('input', type=str, help='')
-    parser.add_argument('output', type=str, help='')
+    description = """
+    Generate a set of convergence data and plots for a folder
+    of CASTEP structures.
+
+    This will produce a folder containing the following output files:
+        - energy.csv: a csv file containing the energies for every iteration of
+            every structure.
+        - energy_cf.png: a contour plot of the energy for each structure and
+            iteration.
+        - energy_lp.png: a line plot of the energy for each structure and
+            iteration.
+    """
+    parser = ap.ArgumentParser(description=description,
+                               formatter_class=ap.RawDescriptionHelpFormatter)
+    parser.add_argument('input', type=str,
+                        help="""A folder containing .castep files""")
+    parser.add_argument('output', type=str,
+                        help="""Name of an output folder to write data and
+                        plots to.""")
 
     args = parser.parse_args()
     directory = args.input

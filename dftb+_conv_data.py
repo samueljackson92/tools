@@ -88,12 +88,38 @@ def safe_remove_folder(path):
 
     return
 
+
 def main():
-    parser = ap.ArgumentParser(description="""Plot the convergence of a set of
-                               structures""",
-                               formatter_class=ap.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('input', type=str, help='')
-    parser.add_argument('output', type=str, help='')
+    description = """
+    Generate a set of convergence data and plots for a folder
+    of DFTB+ structures.
+
+    This will produce a folder containing the following output files:
+        - energy.csv: a csv file containing the energies for every iteration of
+            every structure.
+        - max_force.csv: a csv file containing the max forces for every
+            iteration of every structure.
+        - max_geom_steps.csv: a csv file containing the number of geom steps
+            that were required for convergence for each structure.
+        - energy_cf.png: a contour plot of the energy for each structure and
+            iteration.
+        - max_force_cf.png: a contour plot of the energy for each structure and
+            iteration.
+        - energy_lp.png: a line plot of the energy for each structure and
+            iteration.
+        - max_force_lp.png: a line plot of the energy for each structure and
+            iteration.
+        - max_geom_steps_hist.png: a histogram plot of the number of geom steps
+            for each all structures.
+    """
+    parser = ap.ArgumentParser(description=description,
+                               formatter_class=ap.RawDescriptionHelpFormatter)
+    parser.add_argument('input', type=str,
+                        help="""A folder containing detailed.out files and
+                        dftb+.log files""")
+    parser.add_argument('output', type=str,
+                        help="""Name of an output folder to write data and
+                        plots to.""")
 
     args = parser.parse_args()
     directory = args.input
