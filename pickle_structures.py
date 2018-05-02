@@ -4,7 +4,7 @@ import os
 import argparse as ap
 from _muairss.__main__ import safe_create_folder
 
-from common import NameGenerator, load_dtfb, load_castep
+from common import NameGenerator, load_dtfb, load_castep, load_dftb_precon
 
 
 def load_structures(all_files, ext, func):
@@ -60,14 +60,20 @@ def main():
                  for p, folders, files in os.walk(path) for f in files]
 
     # Look for CASTEP folder and pickle the structures
-    path = os.path.join(args.output, "castep")
     atoms = load_structures(all_files, "-out.cell", load_castep)
+    path = os.path.join(args.output, "castep")
+    pickle_structures(atoms, path)
+
+    # Look for DFTB+ folder and pickle the structures from preconditioned runs
+    atoms = load_structures(all_files, ".json", load_dftb_precon)
+    path = os.path.join(args.output, "dftb+")
     pickle_structures(atoms, path)
 
     # Look for DFTB+ folder and pickle the structures
     path = os.path.join(args.output, "dftb+")
-    atoms = load_structures(all_files, ".xyz", load_dtfb)
+    atoms = load_structures(all_files, ".tag", load_dtfb)
     pickle_structures(atoms, path)
+
 
 
 if __name__ == "__main__":

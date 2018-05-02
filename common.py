@@ -1,13 +1,15 @@
 import fnmatch
-import os
-import sys
+import functools
 import glob
+import json
+import os
 import shutil
 import subprocess
-import functools
+import sys
 from multiprocessing import Pool
 
 import numpy as np
+
 from ase import io
 from ase.calculators.dftb import Dftb
 from ase.calculators.singlepoint import SinglePointCalculator
@@ -196,7 +198,9 @@ def load_dftb_calculator(directory, atoms):
         calc.read_results()
 
     return SinglePointCalculator(atoms, energy=calc.get_potential_energy(),
-                                 forces=calc.get_forces())
+                                 forces=calc.get_forces(),
+                                 charges=calc.get_charges(atoms),
+                                 stress=calc.get_stress(atoms))
 
 
 def load_dtfb(file_name):
@@ -213,10 +217,12 @@ def load_dtfb(file_name):
         single point calculator containing thr results of the computation
         attached.
     """
+    file_name = file_name.replace('results.tag', 'geo_end.xyz')
     # Load the final positions from the .xyz file
     atoms = io.read(file_name)
     # Load the unit cell from the input .gen file
-    atoms_orig = io.read(file_name.replace("geo_end.xyz", "geo_end.gen"))
+    original_file_name = file_name.replace("geo_end.xyz", "geo_end.gen")
+    atoms_orig = io.read(original_file_name)
     atoms.cell = atoms_orig.cell
     atoms.set_tags(tag_muon(atoms))
 
@@ -231,6 +237,8 @@ def load_dtfb(file_name):
         print (e)
         atoms.set_calculator(None)
 
+    atoms.info['original_file'] = original_file_name
+    atoms.set_tags(tag_muon(atoms))
     return atoms
 
 
@@ -258,4 +266,37 @@ def load_castep(file_name):
         # converge
         print("Failed to load -out.cell file")
     atoms.set_tags(tag_muon(atoms))
+    atoms.info['original_file'] = file_name.replace('-out.cell', '.cell')
     return atoms
+
+
+def load_dftb_precon(file_name):
+    """Load the results of a DFTB+ calculation that was run
+    with the ASE preconditioned optimizer
+
+    Args:
+        file_name (str): name of the `results.json` file to load.
+
+    Returns:
+      atoms (ase.Atoms): the loaded ase atoms object with a DFTB+
+        single point calculator containing the results of the computation
+        attached.
+    """
+
+    def load_file(file_name):
+        atoms = io.read(file_name)
+        atoms_orig = io.read(file_name.replace(".xyz", ".gen"))
+        atoms.cell = atoms_orig.cell
+        return atoms
+
+    results = json.load(open(file_name, 'r'))
+    atoms_file = 'geo_end.xyz'
+    atoms = load_file(os.path.join(os.path.dirname(file_name), atoms_file))
+
+    calc = SinglePointCalculator(atoms, energy=results['energy'],
+                                 forces=results['forces'])
+    atoms.set_calculator(calc)
+    atoms.set_tags(tag_muon(atoms))
+
+    return atoms
+

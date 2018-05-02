@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import glob
 import os
 import re
 import shutil
@@ -24,10 +25,14 @@ def read_geom_steps(paths):
 
 
 def read_energy_conv(path):
-    pattern = re.compile(r'Total Energy:\s+([-+]?\d*\.\d+|\d+)\s+H\s+([-+]?\d*\.\d+|\d+)')
+    pattern = re.compile(r'Final energy, E\s+=\s+([+-]?\d*\.?\d*([Ee][+-]?\d+)?)\s+eV')
     energy = []
 
-    file_name = os.path.join(path, "dftb+.log")
+    files = glob.glob(os.path.join(path, "*.castep"))
+    if len(files) == 0:
+        return pd.Series()
+
+    file_name = os.path.join(path, files[0])
     if not os.path.isfile(file_name):
         return pd.Series()
 
@@ -35,26 +40,9 @@ def read_energy_conv(path):
         for line in f_handle:
             matches = pattern.findall(line)
             if len(matches) > 0:
-                energy.append(float(matches[0][1]))
+                energy.append(float(matches[0][0]))
 
     return pd.Series(energy)
-
-
-def read_max_force_conv(path):
-    pattern = re.compile(r'Maximal force component:\s+(\d*\.?\d*([Ee][+-]?\d+)?)')
-    max_force = []
-
-    file_name = os.path.join(path, "dftb+.log")
-    if not os.path.isfile(file_name):
-        return pd.Series()
-
-    with open(file_name, 'r') as f_handle:
-        for line in f_handle:
-            matches = pattern.findall(line)
-            if len(matches) > 0:
-                max_force.append(float(matches[0][0]))
-
-    return pd.Series(max_force)
 
 
 def color_fill_plot(df, file_name):
@@ -101,25 +89,18 @@ def main():
     if not os.path.isdir(directory):
         raise RuntimeError("Input should be a directory")
 
-    paths = get_all_folders_containing_pattern("*detailed.out", directory)
+    paths = get_all_folders_containing_pattern("*.castep", directory)
     energy_conv = pd.DataFrame([read_energy_conv(path) for path in paths])
-    max_force_conv = pd.DataFrame([read_max_force_conv(path) for path in paths])
-    max_geom_steps = read_geom_steps(paths)
 
     safe_remove_folder(args.output)
     os.mkdir(args.output)
 
     energy_conv.to_csv(os.path.join(args.output, "energy.csv"))
-    max_force_conv.to_csv(os.path.join(args.output, "max_force.csv"))
-    max_geom_steps.to_csv(os.path.join(args.output, "max_geom_steps.csv"))
 
     color_fill_plot(energy_conv, os.path.join(args.output, "energy_cf.png"))
-    color_fill_plot(max_force_conv, os.path.join(args.output, "max_force_cf.png"))
 
     line_plot(energy_conv, os.path.join(args.output, "energy_lp.png"))
-    line_plot(max_force_conv, os.path.join(args.output, "max_force_lp.png"))
 
-    histogram_plot(max_geom_steps, os.path.join(args.output, "max_geom_steps_hist.png"))
 
 if __name__ == "__main__":
     main()
