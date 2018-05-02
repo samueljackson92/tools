@@ -13,6 +13,17 @@ from _muairss.input import load_input_file
 
 
 def make_dftb_calc(atoms, folder, params):
+    """Make a DFTB+ calculator with the supplied parameters
+
+    Args:
+        atoms (ase.Atoms): an atoms object to create the DFTB+ calculator for
+        folder (str): directory where the structure files are located.
+        params (dict): dictionary of parameters to pass to the calculator
+
+    Returns:
+        dcalc (ase.calculators.dftb.Dftb): DFTB+ calculator setup with the
+            provided parameters
+    """
     name = os.path.split(folder)[-1]
     atoms.set_pbc(params['dftb_pbc'])
 
@@ -43,7 +54,18 @@ def make_dftb_calc(atoms, folder, params):
 
 
 def run_dftb_precon(folder, param_file):
-    file_name = 'dftb_pin.hsd' if os.path.isfile(os.path.join(folder, 'dftb_pin.hsd')) else 'geo_end.gen'
+    """ Run DFTB+ using a preconditioned optimizer
+
+    Unlike a regular DFTB+ run a result.tag file is not produced because ASE
+    deletes the file. Instead we dump the energy and forces to a json file so
+    we cna load it back in later.
+
+    Args:
+        folder (str): directory containing a structure to optimize
+        param_file (str): path to the parameter file for this structure.
+    """
+    hsd_file = os.path.join(folder, 'dftb_pin.hsd')
+    file_name = 'dftb_pin.hsd' if os.path.isfile(hsd_file) else 'geo_end.gen'
     atoms = io.read(os.path.join(folder, file_name))
     params = load_input_file(param_file)
     calc = make_dftb_calc(atoms, folder, params)
@@ -63,7 +85,7 @@ def run_dftb_precon(folder, param_file):
     json.dump(results, open(os.path.join(folder, "results.json"), 'w'))
 
 
-def do_step(folder, resume=False, param_file=None, precon=False):
+def do_step(folder, param_file=None, precon=False):
     """Execute DFTB+ on a single job.
 
     Args:
@@ -71,9 +93,6 @@ def do_step(folder, resume=False, param_file=None, precon=False):
         resume (bool): whether to skip processing this folder if it has already
             been processed once before.
     """
-    if resume and os.path.isfile(os.path.join(folder, 'results.out')):
-        return
-
     if not precon:
         run_dftb(folder)
     else:
@@ -111,9 +130,8 @@ def main():
                         help='Folder of structures to run dtfb+ on')
     parser.add_argument('--param-file', type=str,
                         help='Parameter file for the runs')
-    parser.add_argument('--precon', required=False, default=False, action='store_true')
-    parser.add_argument('--resume', required=False, default=False, action='store_true',
-                        help="Whether to start from where we left off")
+    parser.add_argument('--precon', required=False, default=False,
+                        action='store_true')
     args = parser.parse_args()
 
     if args.resume:
@@ -122,7 +140,8 @@ def main():
     if not os.path.isdir(os.path.join(args.structures)):
         raise RuntimeError("First argument must be a file or a folder")
 
-    all_folders = get_all_folders_containing_pattern("dftb_in.hsd", args.structures)
+    all_folders = get_all_folders_containing_pattern("dftb_in.hsd",
+                                                     args.structures)
     params = vars(args)
     params.pop('structures')
     process_structures(all_folders, **params)
