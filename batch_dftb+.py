@@ -64,6 +64,11 @@ def run_dftb_precon(folder, param_file):
         folder (str): directory containing a structure to optimize
         param_file (str): path to the parameter file for this structure.
     """
+
+    if param_file is None:
+        raise RuntimeError("A parameter file must be supplied to run \
+                           batch_dftb+ in precon mode")
+
     hsd_file = os.path.join(folder, 'dftb_pin.hsd')
     file_name = 'dftb_pin.hsd' if os.path.isfile(hsd_file) else 'geo_end.gen'
     atoms = io.read(os.path.join(folder, file_name))
@@ -121,17 +126,26 @@ def process_structures(all_folders, **kwargs):
 def main():
     description = """Run a batch of structures with DFTB+.
 
-    This tool takes either a single structure or a folder full of structures
+    This tool takes a folder full of structures
     and runs DFTB+ in each folder.
     """
     parser = ap.ArgumentParser(description=description,
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
     parser.add_argument('structures', type=str,
-                        help='Folder of structures to run dtfb+ on')
-    parser.add_argument('--param-file', type=str,
-                        help='Parameter file for the runs')
+                        help="""Folder of structures to run dtfb+ on. Each
+                        folder should contain a dftb_in.hsd file containing the
+                        parameters to use and a geo_end.gen file containing a
+                        description of the structure.""")
+    parser.add_argument('--param-file', type=str, required=False, default=None,
+                        help="""Parameter file for the runs. This should be the
+                        same parameter file use to generate the structures.
+                        This is only required when runinng in precon mode.""")
     parser.add_argument('--precon', required=False, default=False,
-                        action='store_true')
+                        action='store_true', help="""Run batch_dftb+ in precon
+                        mode. This will run DFTB+ with a preconditioned LBFGS
+                        optimizer instead of the default Conjugate Gradient. To
+                        use this mode the user MUST supply a parameter
+                        file.""")
     args = parser.parse_args()
 
     if args.resume:

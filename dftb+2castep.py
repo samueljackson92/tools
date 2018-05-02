@@ -14,13 +14,6 @@ from _muairss.utils import list_to_string
 
 from common import get_all_folders_containing_pattern
 
-# List of any parameters we need to copy to DFTB+ and
-# what they are called in the general parameter format
-CASTEP_to_DFTB_map = {
-    'geom_force_tol': 'geom_force_tol',
-    'geom_max_iter': 'geom_steps',
-}
-
 
 def convert_single_structure(gen_file, param_file, directory="."):
     atoms = io.read(gen_file)
@@ -61,13 +54,15 @@ def convert_single_structure(gen_file, param_file, directory="."):
 
 
 def main():
-    description = """Run convert DFTB+ files to CASTEP input files"""
+    description = """Convert DFTB+ input files to CASTEP input files"""
     parser = ap.ArgumentParser(description=description,
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
     parser.add_argument('input', type=str,
-                        help='DFTB+ .gen file to convert to CASTEP .cell file')
+                        help="""DFTB+ .gen file or folder of .gen files to
+                        convert to CASTEP .cell file(s)""")
     parser.add_argument('param_file', type=str,
-                        help='YAML file with parameters to convert to CASTEP params')
+                        help="""YAML parameters file to convert to CASTEP param
+                        file""")
     parser.add_argument('--output', type=str, default=".",
                         help='Output directory to place generated files')
     args = parser.parse_args()

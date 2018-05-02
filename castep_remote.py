@@ -145,55 +145,72 @@ def submit_job(remote, directory, batch_size, walltime, ncores, dry_run):
 
     logger.info("Number of pending or running jobs: {}".format(num_queued_jobs))
 
-    batch_dirs = unprocessed[:batch_size]
-    batch_cell_files = unprocessed_cell_files[:batch_size]
-
-    dry_run = '-d' if dry_run else ''
-
     # Give up submitting jobs, but don't quit the program if we have more
     # structures to run but the queue is full
-    if num_queued_jobs > 0:
-        logger.info("There are already running/pending jobs. Quiting")
+    if num_queued_jobs < batch_size:
+        logger.info("There are already too many running/pending jobs. Quiting")
         return False
 
     cleanup_files(remote, directory)
 
     # Submit new jobs is the queue is empty
-    logger.info("Submitting {} jobs".format(batch_size))
+    num_new_jobs = batch_size - num_queued_jobs
+    logger.info("Submitting {} jobs".format(num_new_jobs))
+
+    batch_dirs = unprocessed[:num_new_jobs]
+    batch_cell_files = unprocessed_cell_files[:num_new_jobs]
+
+    dry_run = '-d' if dry_run else ''
 
     for cell_file, path in zip(batch_cell_files, batch_dirs):
         logger.info(cell_file)
-        stdout, _ = run_command(remote, "castepsub {} -n {} -W {} {}".format(
-            dry_run, ncores, walltime, os.path.basename(os.path.splitext(cell_file)[0])), cwd=path)
+        seed_name = os.path.basename(os.path.splitext(cell_file)[0])
+        command = "castepsub {} -n {} -W {} {}".format(dry_run, ncores,
+                                                       walltime, seed_name)
+        stdout, _ = run_command(remote, command, cwd=path)
         logger.info(stdout)
 
     return False
 
 
 if __name__ == "__main__":
-    parser = ap.ArgumentParser(description='Run a batch of structures with DFTB+',
+    description = """Submit CASTEP jobs to a remote queue.
+
+    This tool automates the process of submitting jobs to a remote job queue.
+    The tool will submit a batch of structures to a remote job queue, then
+    watch the queue until space becomes available to submit another job. The
+    limit of the number of jobs to be submitted at any one time is determined
+    by the batch_size argument.
+    """
+
+    parser = ap.ArgumentParser(description=description,
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('host', type=str, help='Host address to connect to')
+    parser.add_argument('host', type=str,
+                        help='Host address to connect to. e.g. scarf.rl.ac.uk')
     parser.add_argument('directory', type=str,
-                        help='Directory of structures to submit to server')
+                        help='Directory of structures to monitor.')
     parser.add_argument('-b', '--batch-size', type=int,
                         default=10, required=False,
-                        help='Batch size to submit to the server')
+                        help='Batch size to submit to the server.')
     parser.add_argument('-W', '--walltime', type=str,
                         default='5:00', required=False,
-                        help='Approximate walltime to pass to CASTEP')
+                        help="""Approximate walltime required from the job.
+                        This option will be passed directly to CASTEP""")
     parser.add_argument('-n', '--ncores', type=str, default=36, required=False,
-                        help='Number of cores to pass to CASTEP')
+                        help="""Number of cores. This option will be passed
+                        directly to CASTEP.""")
     parser.add_argument('-d', '--dry-run', action='store_true',
                         default=False, required=False,
-                        help='Dry run flag to pass to CASTEP')
+                        help="""Dry run flag. No jobs will actually be
+                        submitted with this option. This option will be passed
+                        directly to CASTEP""")
+    parser.add_argument('--wait-time', type=int, default=600, required=False,
+                        help="""Number of seconds to wait before reattempting a failed command.""")
     parser.add_argument('-l', '--log-file', type=str,
                         default='/var/tmp/castep_submitter.log',
                         required=False,
-                        help='Logging file to output to')
-    parser.add_argument('--wait-time', type=int, default=600, required=False,
-                        help='Number of seconds to wait before attempting submission')
+                        help='Location to direct logging output to')
 
     kwargs = vars(parser.parse_args())
     submit(**kwargs)

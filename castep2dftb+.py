@@ -61,8 +61,7 @@ def convert_single_structure(cell_file, param_file, directory="."):
 
 
 def main():
-    description = """Run convert CASTEP .cell files to DFTB+ geo_end.gen
-    """
+    description = """Convert CASTEP .cell files to DFTB+ .gen files"""
     parser = ap.ArgumentParser(description=description,
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
     parser.add_argument('input', type=str,
@@ -70,7 +69,7 @@ def main():
     parser.add_argument('param_file', type=str,
                         help='CASTEP .param file to convert to DFTB+ .in file')
     parser.add_argument('--output', type=str, default=".",
-                        help='Output folder to save to')
+                        help='Output folder to save file to')
     args = parser.parse_args()
     param_file = args.param_file
 
