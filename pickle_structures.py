@@ -2,6 +2,8 @@
 import pickle
 import os
 import argparse as ap
+
+from itertools import imap
 from _muairss.__main__ import safe_create_folder
 
 from common import NameGenerator, load_dtfb, load_castep, load_dftb_precon
@@ -32,22 +34,28 @@ def pickle_structure(file_name, atoms):
         pickle.dump(atoms, handle)
 
 
-def pickle_structures(atoms, out_folder):
+def pickle_structures(func, files, output):
     """Pickle a list of atoms objects.
 
     Args:
       atoms (list): list atoms objects pickle.
       out_folder (str): name of the folder to pickle structures to
     """
+    atoms = map(func, files)
+
     if len(atoms) == 0:
         return
 
-    os.mkdir(out_folder)
+    out_folders = map(os.path.dirname, files)
+    out_folders = map(lambda folder: os.path.join(output, folder), out_folders)
+    for folder in out_folders:
+        os.makedirs(folder)
 
-    pattern = os.path.join(out_folder, "structures{}.pkl")
+    pattern = "structures{}.pkl"
     file_names = NameGenerator(pattern, len(atoms))
-    for file_name, a in zip(file_names, atoms):
-        pickle_structure(file_name, a)
+    file_names = imap(os.path.join, out_folders, file_names)
+    for item in zip(file_names, atoms):
+        pickle_structure(*item)
 
 
 def main():
@@ -74,25 +82,17 @@ def main():
     args.output = safe_create_folder(args.output)
 
     # Find all files in the input directory
-    path = args.input
     all_files = [os.path.join(dir_name, file_name)
-                 for dir_name, folders, files in os.walk(path)
+                 for dir_name, folders, files in os.walk(args.input)
                  for file_name in files]
 
-    # Look for CASTEP folder and pickle the structures
-    atoms = load_structures(all_files, "-out.cell", load_castep)
-    path = os.path.join(args.output, "castep")
-    pickle_structures(atoms, path)
+    cell_files = filter(lambda x: x.endswith("-out.cell"), all_files)
+    json_files = filter(lambda x: x.endswith(".json"), all_files)
+    tag_files = filter(lambda x: x.endswith(".tag"), all_files)
 
-    # Look for DFTB+ folder and pickle the structures from preconditioned runs
-    atoms = load_structures(all_files, ".json", load_dftb_precon)
-    path = os.path.join(args.output, "dftb+")
-    pickle_structures(atoms, path)
-
-    # Look for DFTB+ folder and pickle the structures
-    path = os.path.join(args.output, "dftb+")
-    atoms = load_structures(all_files, ".tag", load_dtfb)
-    pickle_structures(atoms, path)
+    pickle_structures(load_castep, cell_files, args.output)
+    pickle_structures(load_dftb_precon, json_files, args.output)
+    pickle_structures(load_dtfb, tag_files, args.output)
 
 
 if __name__ == "__main__":
