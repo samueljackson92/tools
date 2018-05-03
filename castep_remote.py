@@ -138,8 +138,9 @@ def submit_job(remote, directory, batch_size, walltime, ncores, dry_run):
 
     unprocessed = filter(lambda name: os.path.basename(name) not in
                          stack_names, unprocessed)
-    unprocessed_cell_files = filter(lambda name: os.path.dirname(name) not
-                                    in stack_names, unprocessed_cell_files)
+    unprocessed_cell_files = filter(lambda name:
+                                    os.path.basename(name).replace(".cell", "")
+                                    not in stack_names, unprocessed_cell_files)
 
     num_queued_jobs = num_unprocessed - len(unprocessed)
 
@@ -147,7 +148,7 @@ def submit_job(remote, directory, batch_size, walltime, ncores, dry_run):
 
     # Give up submitting jobs, but don't quit the program if we have more
     # structures to run but the queue is full
-    if num_queued_jobs < batch_size:
+    if num_queued_jobs >= num_unprocessed:
         logger.info("There are already too many running/pending jobs. Quiting")
         return False
 
