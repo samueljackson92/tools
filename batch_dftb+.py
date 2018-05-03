@@ -40,8 +40,12 @@ def make_dftb_calc(atoms, folder, params):
     if 'geom_force_tol' in params:
         args['Driver_MaxForceComponent [eV/AA]'] = params['geom_force_tol']
 
+    # Max steps is zero because we don't want to optimize with DFTB+. Instead
+    # we just evaluate using DFTB+ let the ASE LBFGS optimizer do the work.
     args['Driver_MaxSteps'] = '0'
 
+    # The run_manyDftb_steps option is required here to prevent DFTB+
+    # overwriting some of the options we set.
     if params['dftb_pbc']:
         dcalc = Dftb(label=name, atoms=atoms,
                      kpts=params['k_points_grid'],
@@ -77,7 +81,8 @@ def run_dftb_precon(folder, param_file):
     atoms.set_calculator(calc)
 
     try:
-        opt = PreconLBFGS(atoms, precon=Exp(A=3), use_armijo=True)
+        opt = PreconLBFGS(atoms, precon=Exp(A=3), use_armijo=True,
+                          logfile=None)
         opt.run(steps=int(params['geom_steps']))
     except:
         return
@@ -95,8 +100,6 @@ def do_step(folder, param_file=None, precon=False):
 
     Args:
         folder (str): name of the folder to run DFTB+ in
-        resume (bool): whether to skip processing this folder if it has already
-            been processed once before.
     """
     if not precon:
         run_dftb(folder)
@@ -111,8 +114,6 @@ def process_structures(all_folders, **kwargs):
 
     Args:
         path (str): path to the folder of structures to process.
-        resume (bool): whether to start processing from the beginning or skip
-            already processed files.
     """
     num_variations = len(all_folders)
 
@@ -131,25 +132,30 @@ def main():
     """
     parser = ap.ArgumentParser(description=description,
                                formatter_class=ap.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('structures', type=str,
                         help="""Folder of structures to run dtfb+ on. Each
                         folder should contain a dftb_in.hsd file containing the
                         parameters to use and a geo_end.gen file containing a
                         description of the structure.""")
+
+    parser.add_argument('-j', '--ncores', type=int, required=False,
+                        default=None,
+                        help="""Number of jobs to run in parallel""")
+
     parser.add_argument('--param-file', type=str, required=False, default=None,
                         help="""Parameter file for the runs. This should be the
                         same parameter file use to generate the structures.
                         This is only required when runinng in precon mode.""")
-    parser.add_argument('--precon', required=False, default=False,
-                        action='store_true', help="""Run batch_dftb+ in precon
-                        mode. This will run DFTB+ with a preconditioned LBFGS
-                        optimizer instead of the default Conjugate Gradient. To
-                        use this mode the user MUST supply a parameter
-                        file.""")
-    args = parser.parse_args()
 
-    if args.resume:
-        print ("Resuming!")
+    parser.add_argument('--precon', required=False, default=False,
+                        action='store_true',
+                        help="""Run batch_dftb+ in precon mode. This will run
+                        DFTB+ with a preconditioned LBFGS optimizer instead of
+                        the default Conjugate Gradient. To use this mode the
+                        user MUST supply a parameter file.""")
+
+    args = parser.parse_args()
 
     if not os.path.isdir(os.path.join(args.structures)):
         raise RuntimeError("First argument must be a file or a folder")

@@ -23,24 +23,27 @@ class JobBatch:
     to the function.
     """
 
-    def __init__(self, func, items, **params):
+    def __init__(self, func, items, ncores=None, **params):
         """Create a new job batch run
 
         Args:
             func (function): function to execute on every item
             items (list): list of items to call func on in parallel
+            ncores (int): max number of processes to run in parallel
             params (dict): dict of keyword parameters to be passed to func
         """
         self._func = functools.partial(func, **params)
         self._items = items
+        self._ncores = ncores
 
     def __enter__(self):
         """Create the job pool and jobs to run"""
-        self._pool = Pool(processes=4)
+        self._pool = Pool(processes=self._ncores)
         self._jobs = self._pool.imap_unordered(self._func, self._items)
         return self
 
     def __iter__(self):
+        """Return the iterator to the jobs"""
         return self
 
     def __next__(self):
@@ -52,11 +55,14 @@ class JobBatch:
         return result
 
     def next(self):
-        """Next method implemented for python2 support"""
+        """Get the next job to be executed in the queue
+
+        This method is implemented for python2 support
+        """
         return self.__next__()
 
     def __exit__(self, type, value, traceback):
-        """Close the job poool when finished"""
+        """Close the job pool when finished"""
         self._pool.close()
 
 
